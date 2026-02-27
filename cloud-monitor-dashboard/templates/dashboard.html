@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloud Resource Monitoring Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Cloud Resource Monitoring Dashboard</h1>
+    <p>Centralized visibility for resources, metrics, alerts, and billing</p>
+  </header>
+
+  <main>
+    <section class="cards">
+      <div class="card"><h3>Total Resources</h3><p>{{ total_resources }}</p></div>
+      <div class="card"><h3>Total Alerts</h3><p>{{ total_alerts }}</p></div>
+      <div class="card"><h3>Open Alerts</h3><p>{{ open_alerts }}</p></div>
+      <div class="card"><h3>Monthly Cost</h3><p>${{ '%.2f'|format(monthly_cost) }}</p></div>
+    </section>
+
+    <section class="chart-box">
+      <h2>CPU vs Memory (latest samples)</h2>
+      <canvas id="usageChart"></canvas>
+    </section>
+
+    <section class="table-box">
+      <h2>Recent Alerts</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Severity</th><th>Status</th><th>Message</th><th>Time</th></tr>
+        </thead>
+        <tbody>
+          {% for a in recent_alerts %}
+          <tr>
+            <td>{{ a.alert_id }}</td>
+            <td>{{ a.severity }}</td>
+            <td>{{ a.status }}</td>
+            <td>{{ a.message }}</td>
+            <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">No alerts yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    // Provide safe defaults from server if values are missing
+    const labels = {{ labels|default([])|tojson }};
+    const cpuValues = {{ cpu_values|default([])|tojson }};
+    const memValues = {{ mem_values|default([])|tojson }};
+
+    const canvas = document.getElementById('usageChart');
+    if (canvas && Array.isArray(labels) && labels.length && Array.isArray(cpuValues) && Array.isArray(memValues)) {
+      const ctx = canvas.getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'CPU %', data: cpuValues, borderWidth: 2, borderColor: 'rgba(54,162,235,1)', tension: 0.2 },
+            { label: 'Memory %', data: memValues, borderWidth: 2, borderColor: 'rgba(255,99,132,1)', tension: 0.2 }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+      });
+    } else if (canvas) {
+      canvas.parentElement.innerHTML = '<p>No usage data available.</p>';
+    }
+  </script>
+</body>
+</html>
